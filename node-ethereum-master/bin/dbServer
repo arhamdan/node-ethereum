@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+var argv = require('minimist')(process.argv.slice(2));
+var multilevel = require('multilevel');
+var net = require('net');
+var level = require('level');
+var Sublevel = require('level-sublevel');
+var enableDestroy = require('server-destroy');
+
+if (argv.help) {
+  var help = 'Usage <path> <port> [<host>] \n'
+  + 'Start the DB server for node-Ethereum \n'
+  + '  <path>   The path to the DB \n'
+  + '  <port>   The port that the DB server listening to \n';
+
+  console.log(help);
+  process.exit();
+}
+
+
+if(!argv._[0]){
+  console.log('<path> <port> is required. usage `dbServer 838383 ./myDB`');
+  process.exit();
+}else if(!argv._[1]){
+  console.log('<port> is required');
+  process.exit();
+}
+
+var port = argv._[1];
+var path = argv._[0];
+console.log(path);
+var db = Sublevel(level(path));
+var isShutingDown = false;
+
+db.sublevel('state');
+db.sublevel('blocks');
+db.sublevel('details');
+db.sublevel('peers');
+
+var server = net.createServer(function (con) {
+  con.pipe(multilevel.server(db)).pipe(con);
+});
+
+enableDestroy(server);
+
+server.listen(port, function () {
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
+  console.log('dbServer - started: /:' + port );
+  if(process.send){
+    process.send('started');
+  }
+  process.on('disconnect', shutdown);
+});
+
+function shutdown (){
+  if(!isShutingDown){
+    isShutingDown = true;
+    server.destroy(function(){
+      console.log('dbServer - closed');
+      process.exit();
+    });
+  }
+}

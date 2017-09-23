@@ -1,0 +1,16 @@
+{
+  "logging": 3,
+  "network": {
+    "port": 30301,
+    "host": "0.0.0.0"
+  },
+  "dbServer": true, 
+  "db": {
+    "port": 30304
+  },
+  "upnp": false,
+  "rpc": {
+    "ws": false,
+    "xhr": false
+  }
+}
